@@ -16,7 +16,7 @@ export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = useState("")
 
   const reports = useQuery(
-    api.reports.getReports,
+    api.reports.getReportsByUser,
     user?.id ? { userId: user.id } : "skip"
   )
 

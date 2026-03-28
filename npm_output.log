@@ -1,0 +1,79 @@
+
+> my-project@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.0 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+✓ Ready in 605ms
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+
+⨯ Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at updateSession (lib/supabase/middleware.ts:9:38)
+    at middleware (middleware.ts:5:29)
+   7 |   })
+   8 |
+>  9 |   const supabase = createServerClient(
+     |                                      ^
+  10 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  11 |     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  12 |     {
+ GET /dashboard 404 in 1666ms (next.js: -153775µs, proxy.ts: 1651ms, application-code: 168ms)
+[browser] Uncaught Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at updateSession (lib/supabase/middleware.ts:9:38)
+    at middleware (middleware.ts:5:29)
+   7 |   })
+   8 |
+>  9 |   const supabase = createServerClient(
+     |                                      ^
+  10 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  11 |     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  12 |     {
+○ Compiling /_not-found/page ...
+⨯ Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at updateSession (lib/supabase/middleware.ts:9:38)
+    at middleware (middleware.ts:5:29)
+   7 |   })
+   8 |
+>  9 |   const supabase = createServerClient(
+     |                                      ^
+  10 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  11 |     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  12 |     {
+ GET /reports 404 in 119ms (next.js: -20775µs, proxy.ts: 115ms, application-code: 25ms)
+[browser] Uncaught Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at updateSession (lib/supabase/middleware.ts:9:38)
+    at middleware (middleware.ts:5:29)
+   7 |   })
+   8 |
+>  9 |   const supabase = createServerClient(
+     |                                      ^
+  10 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  11 |     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  12 |     {
