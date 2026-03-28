@@ -1,7 +1,7 @@
 import { query, mutation } from "./_generated/server"
 import { v } from "convex/values"
 
-export const getReports = query({
+export const getReportsByUser = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
     const reports = await ctx.db
@@ -42,13 +42,12 @@ export const createReport = mutation({
   args: {
     userId: v.string(),
     symptomInput: v.string(),
-    answers: v.object({
-      duration: v.string(),
-      severity: v.string(),
-      medications: v.string(),
-      conditions: v.string(),
-      worsening: v.string(),
-    }),
+    answers: v.array(
+      v.object({
+        question: v.string(),
+        answer: v.string(),
+      })
+    ),
     severity: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
     structuredReport: v.object({
       explanation: v.string(),

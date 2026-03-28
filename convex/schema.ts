@@ -5,13 +5,12 @@ export default defineSchema({
   reports: defineTable({
     userId: v.string(),
     symptomInput: v.string(),
-    answers: v.object({
-      duration: v.string(),
-      severity: v.string(),
-      medications: v.string(),
-      conditions: v.string(),
-      worsening: v.string(),
-    }),
+    answers: v.array(
+      v.object({
+        question: v.string(),
+        answer: v.string(),
+      })
+    ),
     severity: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
     structuredReport: v.object({
       explanation: v.string(),
