@@ -22,7 +22,7 @@ export default function DashboardPage() {
   const { user, loading: userLoading } = useUser()
 
   const reports = useQuery(
-    api.reports.getReports,
+    api.reports.getReportsByUser,
     user?.id ? { userId: user.id } : "skip"
   )
 
