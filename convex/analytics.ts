@@ -108,7 +108,7 @@ function getMonthlyData(reports: Array<{ createdAt: number; severity: "low" | "m
   return result
 }
 
-export const createAnalyticsEntry = mutation({
+export const updateAnalytics = mutation({
   args: {
     userId: v.string(),
     issue: v.string(),
@@ -127,7 +127,7 @@ export const createAnalyticsEntry = mutation({
   },
 })
 
-export const markAsResolved = mutation({
+export const markResolved = mutation({
   args: { analyticsId: v.id("analytics") },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.analyticsId, { resolved: true })

@@ -10,64 +10,27 @@ import { cn } from "@/lib/utils"
 
 interface FollowUpQuestionsProps {
   symptoms: string
+  questions: string[]
   onComplete: (answers: Record<string, string>) => void
   onBack: () => void
 }
 
-const questions = [
-  {
-    id: "duration",
-    question: "How long have you been experiencing these symptoms?",
-    type: "choice" as const,
-    options: [
-      "Less than 24 hours",
-      "1-3 days",
-      "4-7 days",
-      "More than a week",
-    ],
-  },
-  {
-    id: "severity",
-    question: "How would you rate the severity of your symptoms?",
-    type: "choice" as const,
-    options: ["Mild - noticeable but not bothersome", "Moderate - affecting daily activities", "Severe - significantly impacting life", "Very severe - unbearable"],
-  },
-  {
-    id: "medications",
-    question: "Are you currently taking any medications?",
-    type: "text" as const,
-    placeholder: "List any medications or supplements, or type 'None'",
-  },
-  {
-    id: "conditions",
-    question: "Do you have any pre-existing medical conditions?",
-    type: "choice" as const,
-    options: [
-      "No known conditions",
-      "Heart or cardiovascular issues",
-      "Diabetes",
-      "Respiratory conditions",
-      "Other chronic conditions",
-    ],
-  },
-  {
-    id: "worsening",
-    question: "Have your symptoms been getting worse, staying the same, or improving?",
-    type: "choice" as const,
-    options: ["Getting worse", "Staying the same", "Slowly improving", "Fluctuating"],
-  },
-]
-
 export function FollowUpQuestions({
+  questions,
   onComplete,
   onBack,
 }: FollowUpQuestionsProps) {
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
 
-  const question = questions[currentQuestion]
+  if (!questions || questions.length === 0) {
+    return <div>Loading questions...</div>
+  }
+
+  const questionText = questions[currentQuestion]
+  const questionId = `q${currentQuestion}`
   const isLastQuestion = currentQuestion === questions.length - 1
-  const hasAnswer = Boolean(answers[question.id])
+  const hasAnswer = Boolean(answers[questionText])
 
   const handleNext = () => {
     if (isLastQuestion) {
@@ -86,7 +49,7 @@ export function FollowUpQuestions({
   }
 
   const handleAnswer = (value: string) => {
-    setAnswers((prev) => ({ ...prev, [question.id]: value }))
+    setAnswers((prev) => ({ ...prev, [questionText]: value }))
   }
 
   return (
@@ -114,47 +77,20 @@ export function FollowUpQuestions({
 
       {/* Question */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">{question.question}</h2>
+        <h2 className="text-xl font-semibold">{questionText}</h2>
 
-        {question.type === "choice" && (
-          <RadioGroup
-            value={answers[question.id] || ""}
-            onValueChange={handleAnswer}
-            className="space-y-3"
-          >
-            {question.options?.map((option) => (
-              <label
-                key={option}
-                className={cn(
-                  "flex cursor-pointer items-center gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-accent",
-                  answers[question.id] === option &&
-                    "border-primary bg-primary/5"
-                )}
-              >
-                <RadioGroupItem value={option} id={option} />
-                <span className="text-sm font-medium">{option}</span>
-                {answers[question.id] === option && (
-                  <Check className="ml-auto h-4 w-4 text-primary" />
-                )}
-              </label>
-            ))}
-          </RadioGroup>
-        )}
-
-        {question.type === "text" && (
-          <div className="space-y-2">
-            <Label htmlFor={question.id} className="sr-only">
-              {question.question}
-            </Label>
-            <Input
-              id={question.id}
-              value={answers[question.id] || ""}
-              onChange={(e) => handleAnswer(e.target.value)}
-              placeholder={question.placeholder}
-              className="h-12 text-base"
-            />
-          </div>
-        )}
+        <div className="space-y-2">
+          <Label htmlFor={questionId} className="sr-only">
+            {questionText}
+          </Label>
+          <Input
+            id={questionId}
+            value={answers[questionText] || ""}
+            onChange={(e) => handleAnswer(e.target.value)}
+            placeholder="Type your answer here..."
+            className="h-12 text-base"
+          />
+        </div>
       </div>
 
       {/* Navigation */}

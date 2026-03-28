@@ -17,6 +17,7 @@ export type AnalysisStep = 1 | 2 | 3 | 4 | 5
 export interface AnalysisData {
   symptoms: string
   answers: Record<string, string>
+  questions?: string[]
   results?: {
     severity: "low" | "medium" | "high"
     explanation: string
@@ -43,91 +44,76 @@ export default function AnalysisPage() {
     symptoms: "",
     answers: {},
   })
+  const [loadingQuestions, setLoadingQuestions] = useState(false)
 
-  const createReport = useMutation(api.reports.createReport)
-  const createAnalyticsEntry = useMutation(api.analytics.createAnalyticsEntry)
-
-  const handleSymptomSubmit = (symptoms: string) => {
+  const handleSymptomSubmit = async (symptoms: string) => {
     setAnalysisData((prev) => ({ ...prev, symptoms }))
+    setLoadingQuestions(true)
     setCurrentStep(2)
+
+    try {
+      const res = await fetch("/api/questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symptom: symptoms }),
+      })
+      const data = await res.json()
+      if (data.questions) {
+        setAnalysisData((prev) => ({ ...prev, questions: data.questions }))
+      }
+    } catch (e) {
+      console.error("Error fetching questions", e)
+    } finally {
+      setLoadingQuestions(false)
+    }
   }
 
   const handleQuestionsComplete = async (answers: Record<string, string>) => {
     setAnalysisData((prev) => ({ ...prev, answers }))
     setCurrentStep(3)
 
-    // Simulate analysis delay
-    setTimeout(async () => {
-      const results = {
-        severity: "medium" as const,
-        explanation:
-          "Based on your symptoms and responses, this appears to be a moderate condition that should be monitored closely. The combination of symptoms suggests a possible viral infection or inflammatory response.",
-        possibleCauses: [
-          "Viral infection (common cold or flu)",
-          "Tension headache with secondary symptoms",
-          "Mild dehydration affecting multiple systems",
-          "Stress-related physical manifestation",
-        ],
-        immediateActions: [
-          "Rest and ensure adequate sleep (7-9 hours)",
-          "Stay well hydrated with water and electrolytes",
-          "Monitor temperature every 4-6 hours",
-          "Avoid strenuous physical activity",
-        ],
-        dietRecommendations: [
-          "Light, easily digestible foods",
-          "Warm broths and soups",
-          "Fresh fruits rich in Vitamin C",
-          "Avoid caffeine and alcohol",
-        ],
-        medications: [
-          "Over-the-counter pain relievers (acetaminophen or ibuprofen)",
-          "Antihistamines if congestion is present",
-          "Throat lozenges for sore throat relief",
-        ],
-        whenToSeekHelp:
-          "Seek immediate medical attention if: fever exceeds 103°F (39.4°C), symptoms persist beyond 7 days, you experience difficulty breathing, severe chest pain, or confusion.",
-      }
+    try {
+      const res = await fetch("/api/triage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symptom: analysisData.symptoms, answers }),
+      })
+      const data = await res.json()
 
-      setAnalysisData((prev) => ({ ...prev, results }))
-      setCurrentStep(4)
+      if (data.report) {
+        const results = data.report
+        setAnalysisData((prev) => ({ ...prev, results }))
+        setCurrentStep(4)
 
-      // Save report to Convex
-      if (user?.id) {
-        try {
-          await createReport({
-            userId: user.id,
-            symptomInput: analysisData.symptoms,
-            answers: {
-              duration: answers.duration || "Not specified",
-              severity: answers.severity || "Not specified",
-              medications: answers.medications || "None",
-              conditions: answers.conditions || "None",
-              worsening: answers.worsening || "Not specified",
-            },
-            severity: results.severity,
-            structuredReport: {
-              explanation: results.explanation,
-              possibleCauses: results.possibleCauses,
-              immediateActions: results.immediateActions,
-              dietRecommendations: results.dietRecommendations,
-              medications: results.medications,
-              whenToSeekHelp: results.whenToSeekHelp,
-            },
-          })
-
-          // Also create an analytics entry
-          await createAnalyticsEntry({
-            userId: user.id,
-            issue: analysisData.symptoms,
-            severity: results.severity,
-            resolved: false,
-          })
-        } catch (error) {
-          console.error("Failed to save report:", error)
+        if (user?.id) {
+          try {
+            await fetch("/api/report/save", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                symptomInput: analysisData.symptoms,
+                answers,
+                severity: results.severity,
+                structuredReport: {
+                  explanation: results.explanation,
+                  possibleCauses: results.possible_causes || results.possibleCauses || [],
+                  immediateActions: results.immediate_actions || results.immediateActions || [],
+                  dietRecommendations: results.diet_recommendations || results.dietRecommendations || [],
+                  medications: results.medications || [],
+                  whenToSeekHelp: results.when_to_seek_help || results.whenToSeekHelp || "",
+                },
+              }),
+            })
+          } catch (error) {
+            console.error("Failed to save report:", error)
+          }
         }
+      } else {
+        console.error("No report generated", data.error)
       }
-    }, 3000)
+    } catch (e) {
+      console.error("Error during triage", e)
+    }
   }
 
   const handleStartOver = () => {
@@ -192,11 +178,16 @@ export default function AnalysisPage() {
             <SymptomInput onSubmit={handleSymptomSubmit} />
           )}
           {currentStep === 2 && (
-            <FollowUpQuestions
-              symptoms={analysisData.symptoms}
-              onComplete={handleQuestionsComplete}
-              onBack={() => setCurrentStep(1)}
-            />
+            loadingQuestions ? (
+              <AnalysisLoading />
+            ) : (
+              <FollowUpQuestions
+                symptoms={analysisData.symptoms}
+                questions={analysisData.questions || []}
+                onComplete={handleQuestionsComplete}
+                onBack={() => setCurrentStep(1)}
+              />
+            )
           )}
           {currentStep === 3 && <AnalysisLoading />}
           {currentStep === 4 && analysisData.results && (
