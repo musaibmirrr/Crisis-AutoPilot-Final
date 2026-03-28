@@ -1,6 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { useMutation } from "convex/react"
+import { api } from "@/convex/_generated/api"
+import { useUser } from "@/hooks/use-user"
 import { SymptomInput } from "@/components/analysis/symptom-input"
 import { FollowUpQuestions } from "@/components/analysis/follow-up-questions"
 import { AnalysisLoading } from "@/components/analysis/analysis-loading"
@@ -34,57 +37,96 @@ const steps = [
 ]
 
 export default function AnalysisPage() {
+  const { user } = useUser()
   const [currentStep, setCurrentStep] = useState<AnalysisStep>(1)
   const [analysisData, setAnalysisData] = useState<AnalysisData>({
     symptoms: "",
     answers: {},
   })
 
+  const createReport = useMutation(api.reports.createReport)
+  const createAnalyticsEntry = useMutation(api.analytics.createAnalyticsEntry)
+
   const handleSymptomSubmit = (symptoms: string) => {
     setAnalysisData((prev) => ({ ...prev, symptoms }))
     setCurrentStep(2)
   }
 
-  const handleQuestionsComplete = (answers: Record<string, string>) => {
+  const handleQuestionsComplete = async (answers: Record<string, string>) => {
     setAnalysisData((prev) => ({ ...prev, answers }))
     setCurrentStep(3)
 
     // Simulate analysis delay
-    setTimeout(() => {
-      setAnalysisData((prev) => ({
-        ...prev,
-        results: {
-          severity: "medium",
-          explanation:
-            "Based on your symptoms and responses, this appears to be a moderate condition that should be monitored closely. The combination of symptoms suggests a possible viral infection or inflammatory response.",
-          possibleCauses: [
-            "Viral infection (common cold or flu)",
-            "Tension headache with secondary symptoms",
-            "Mild dehydration affecting multiple systems",
-            "Stress-related physical manifestation",
-          ],
-          immediateActions: [
-            "Rest and ensure adequate sleep (7-9 hours)",
-            "Stay well hydrated with water and electrolytes",
-            "Monitor temperature every 4-6 hours",
-            "Avoid strenuous physical activity",
-          ],
-          dietRecommendations: [
-            "Light, easily digestible foods",
-            "Warm broths and soups",
-            "Fresh fruits rich in Vitamin C",
-            "Avoid caffeine and alcohol",
-          ],
-          medications: [
-            "Over-the-counter pain relievers (acetaminophen or ibuprofen)",
-            "Antihistamines if congestion is present",
-            "Throat lozenges for sore throat relief",
-          ],
-          whenToSeekHelp:
-            "Seek immediate medical attention if: fever exceeds 103°F (39.4°C), symptoms persist beyond 7 days, you experience difficulty breathing, severe chest pain, or confusion.",
-        },
-      }))
+    setTimeout(async () => {
+      const results = {
+        severity: "medium" as const,
+        explanation:
+          "Based on your symptoms and responses, this appears to be a moderate condition that should be monitored closely. The combination of symptoms suggests a possible viral infection or inflammatory response.",
+        possibleCauses: [
+          "Viral infection (common cold or flu)",
+          "Tension headache with secondary symptoms",
+          "Mild dehydration affecting multiple systems",
+          "Stress-related physical manifestation",
+        ],
+        immediateActions: [
+          "Rest and ensure adequate sleep (7-9 hours)",
+          "Stay well hydrated with water and electrolytes",
+          "Monitor temperature every 4-6 hours",
+          "Avoid strenuous physical activity",
+        ],
+        dietRecommendations: [
+          "Light, easily digestible foods",
+          "Warm broths and soups",
+          "Fresh fruits rich in Vitamin C",
+          "Avoid caffeine and alcohol",
+        ],
+        medications: [
+          "Over-the-counter pain relievers (acetaminophen or ibuprofen)",
+          "Antihistamines if congestion is present",
+          "Throat lozenges for sore throat relief",
+        ],
+        whenToSeekHelp:
+          "Seek immediate medical attention if: fever exceeds 103°F (39.4°C), symptoms persist beyond 7 days, you experience difficulty breathing, severe chest pain, or confusion.",
+      }
+
+      setAnalysisData((prev) => ({ ...prev, results }))
       setCurrentStep(4)
+
+      // Save report to Convex
+      if (user?.id) {
+        try {
+          await createReport({
+            userId: user.id,
+            symptomInput: analysisData.symptoms,
+            answers: {
+              duration: answers.duration || "Not specified",
+              severity: answers.severity || "Not specified",
+              medications: answers.medications || "None",
+              conditions: answers.conditions || "None",
+              worsening: answers.worsening || "Not specified",
+            },
+            severity: results.severity,
+            structuredReport: {
+              explanation: results.explanation,
+              possibleCauses: results.possibleCauses,
+              immediateActions: results.immediateActions,
+              dietRecommendations: results.dietRecommendations,
+              medications: results.medications,
+              whenToSeekHelp: results.whenToSeekHelp,
+            },
+          })
+
+          // Also create an analytics entry
+          await createAnalyticsEntry({
+            userId: user.id,
+            issue: analysisData.symptoms,
+            severity: results.severity,
+            resolved: false,
+          })
+        } catch (error) {
+          console.error("Failed to save report:", error)
+        }
+      }
     }, 3000)
   }
 
