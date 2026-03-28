@@ -1,6 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { useQuery, useMutation } from "convex/react"
+import { api } from "@/convex/_generated/api"
+import { useUser } from "@/hooks/use-user"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -20,25 +23,10 @@ import {
   Line,
   Legend,
 } from "recharts"
-import { TrendingUp, TrendingDown, Activity } from "lucide-react"
+import { TrendingUp, TrendingDown, Activity, Loader2 } from "lucide-react"
 
-// Mock data
-const severityData = [
-  { name: "Low", value: 12, color: "var(--color-success)" },
-  { name: "Medium", value: 8, color: "var(--color-warning)" },
-  { name: "High", value: 4, color: "var(--color-destructive)" },
-]
-
-const monthlyData = [
-  { month: "Oct", reports: 2, avgSeverity: 1.5 },
-  { month: "Nov", reports: 3, avgSeverity: 1.8 },
-  { month: "Dec", reports: 5, avgSeverity: 2.1 },
-  { month: "Jan", reports: 4, avgSeverity: 1.6 },
-  { month: "Feb", reports: 6, avgSeverity: 1.9 },
-  { month: "Mar", reports: 8, avgSeverity: 1.4 },
-]
-
-const wellnessData = [
+// Fallback wellness data (will be replaced with real data in production)
+const defaultWellnessData = [
   { week: "W1", score: 65 },
   { week: "W2", score: 70 },
   { week: "W3", score: 62 },
@@ -50,7 +38,54 @@ const wellnessData = [
 ]
 
 export default function AnalyticsPage() {
+  const { user, loading: userLoading } = useUser()
   const [feelingBetter, setFeelingBetter] = useState(false)
+
+  const analyticsSummary = useQuery(
+    api.analytics.getAnalyticsSummary,
+    user?.id ? { userId: user.id } : "skip"
+  )
+
+  const createAnalyticsEntry = useMutation(api.analytics.createAnalyticsEntry)
+
+  const handleFeelingBetterChange = async (checked: boolean) => {
+    setFeelingBetter(checked)
+    if (user?.id && checked) {
+      await createAnalyticsEntry({
+        userId: user.id,
+        issue: "Daily wellness check-in",
+        severity: "low",
+        resolved: true,
+      })
+    }
+  }
+
+  const isLoading = userLoading || analyticsSummary === undefined
+
+  if (isLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  const severityData = analyticsSummary?.severityDistribution ?? [
+    { name: "Low", value: 0, color: "var(--color-success)" },
+    { name: "Medium", value: 0, color: "var(--color-warning)" },
+    { name: "High", value: 0, color: "var(--color-destructive)" },
+  ]
+
+  const monthlyData = analyticsSummary?.monthlyData ?? []
+  const wellnessScore = analyticsSummary?.wellnessScore ?? 75
+  const severityTrend = analyticsSummary?.severityTrend ?? 0
+  const totalReportsThisYear = analyticsSummary?.totalReportsThisYear ?? 0
+
+  // Generate wellness data based on the wellness score
+  const wellnessData = defaultWellnessData.map((item, index) => ({
+    ...item,
+    score: Math.max(0, Math.min(100, wellnessScore - (defaultWellnessData.length - 1 - index) * 3 + Math.random() * 10)),
+  }))
 
   return (
     <div className="space-y-8">
@@ -67,14 +102,14 @@ export default function AnalyticsPage() {
         <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
           <Label
             htmlFor="feeling-better"
-            className="text-sm font-medium cursor-pointer"
+            className="cursor-pointer text-sm font-medium"
           >
             Feeling better today?
           </Label>
           <Switch
             id="feeling-better"
             checked={feelingBetter}
-            onCheckedChange={setFeelingBetter}
+            onCheckedChange={handleFeelingBetterChange}
           />
         </div>
       </div>
@@ -84,10 +119,17 @@ export default function AnalyticsPage() {
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
-              <TrendingDown className="h-6 w-6 text-success" />
+              {severityTrend <= 0 ? (
+                <TrendingDown className="h-6 w-6 text-success" />
+              ) : (
+                <TrendingUp className="h-6 w-6 text-destructive" />
+              )}
             </div>
             <div>
-              <p className="text-2xl font-bold">-23%</p>
+              <p className="text-2xl font-bold">
+                {severityTrend <= 0 ? "" : "+"}
+                {severityTrend}%
+              </p>
               <p className="text-sm text-muted-foreground">
                 Severity trend (30 days)
               </p>
@@ -100,7 +142,7 @@ export default function AnalyticsPage() {
               <Activity className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold">24</p>
+              <p className="text-2xl font-bold">{totalReportsThisYear}</p>
               <p className="text-sm text-muted-foreground">
                 Total analyses this year
               </p>
@@ -113,10 +155,8 @@ export default function AnalyticsPage() {
               <TrendingUp className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold">85</p>
-              <p className="text-sm text-muted-foreground">
-                Wellness score
-              </p>
+              <p className="text-2xl font-bold">{wellnessScore}</p>
+              <p className="text-sm text-muted-foreground">Wellness score</p>
             </div>
           </CardContent>
         </Card>
@@ -184,7 +224,11 @@ export default function AnalyticsPage() {
                     tickLine={false}
                     tick={{ fontSize: 12 }}
                   />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12 }}
+                  />
                   <Tooltip />
                   <Bar
                     dataKey="reports"
@@ -256,21 +300,23 @@ export default function AnalyticsPage() {
             <li className="flex items-start gap-2 text-sm">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
               <span className="text-muted-foreground">
-                Your average severity has decreased by 23% over the past 30 days
+                {severityTrend <= 0
+                  ? `Your average severity has decreased by ${Math.abs(severityTrend)}% over the past 30 days`
+                  : `Your average severity has increased by ${severityTrend}% over the past 30 days`}
               </span>
             </li>
             <li className="flex items-start gap-2 text-sm">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
               <span className="text-muted-foreground">
-                Most analyses are in the low severity category, indicating good
-                overall health monitoring
+                {severityData[0].value >= severityData[2].value
+                  ? "Most analyses are in the low severity category, indicating good overall health monitoring"
+                  : "Consider focusing on preventive care to reduce high severity cases"}
               </span>
             </li>
             <li className="flex items-start gap-2 text-sm">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
               <span className="text-muted-foreground">
-                Your wellness score has improved from 65 to 85 over the past 8
-                weeks
+                Your wellness score is {wellnessScore} - {wellnessScore >= 80 ? "excellent" : wellnessScore >= 60 ? "good" : "needs attention"}
               </span>
             </li>
           </ul>

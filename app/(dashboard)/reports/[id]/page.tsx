@@ -1,4 +1,10 @@
+"use client"
+
 import Link from "next/link"
+import { useParams } from "next/navigation"
+import { useQuery } from "convex/react"
+import { api } from "@/convex/_generated/api"
+import { Id } from "@/convex/_generated/dataModel"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { SeverityBadge } from "@/components/dashboard/severity-badge"
@@ -13,56 +19,62 @@ import {
   Utensils,
   Pill,
   HelpCircle,
+  Loader2,
 } from "lucide-react"
 
-// Mock report data - in production, this would be fetched based on the ID
-const reportData = {
-  id: "1",
-  symptom: "Persistent headache with mild fever",
-  severity: "medium" as const,
-  date: "March 28, 2026",
-  time: "2:30 PM",
-  description:
-    "I have had a persistent headache for the past 2 days, mostly in the front of my head. It gets worse in the afternoon. I also feel slightly nauseous and have had a mild fever around 99°F.",
-  analysis: {
-    explanation:
-      "Based on your symptoms and responses, this appears to be a moderate condition that should be monitored closely. The combination of symptoms suggests a possible viral infection or inflammatory response.",
-    possibleCauses: [
-      "Viral infection (common cold or flu)",
-      "Tension headache with secondary symptoms",
-      "Mild dehydration affecting multiple systems",
-      "Stress-related physical manifestation",
-    ],
-    immediateActions: [
-      "Rest and ensure adequate sleep (7-9 hours)",
-      "Stay well hydrated with water and electrolytes",
-      "Monitor temperature every 4-6 hours",
-      "Avoid strenuous physical activity",
-    ],
-    dietRecommendations: [
-      "Light, easily digestible foods",
-      "Warm broths and soups",
-      "Fresh fruits rich in Vitamin C",
-      "Avoid caffeine and alcohol",
-    ],
-    medications: [
-      "Over-the-counter pain relievers (acetaminophen or ibuprofen)",
-      "Antihistamines if congestion is present",
-      "Throat lozenges for sore throat relief",
-    ],
-    whenToSeekHelp:
-      "Seek immediate medical attention if: fever exceeds 103°F (39.4°C), symptoms persist beyond 7 days, you experience difficulty breathing, severe chest pain, or confusion.",
-  },
-  answers: {
-    duration: "1-3 days",
-    severity: "Moderate - affecting daily activities",
-    medications: "None",
-    conditions: "No known conditions",
-    worsening: "Staying the same",
-  },
-}
-
 export default function ReportDetailPage() {
+  const params = useParams()
+  const reportId = params.id as Id<"reports">
+
+  const report = useQuery(api.reports.getReportById, { reportId })
+
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp)
+    return {
+      date: date.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }),
+      time: date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      }),
+    }
+  }
+
+  if (report === undefined) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (report === null) {
+    return (
+      <div className="mx-auto max-w-4xl space-y-6">
+        <Button variant="ghost" asChild className="gap-2">
+          <Link href="/reports">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Reports
+          </Link>
+        </Button>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-lg font-medium">Report not found</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              This report may have been deleted or does not exist.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const { date, time } = formatDate(report.createdAt)
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       {/* Back Button */}
@@ -80,17 +92,14 @@ export default function ReportDetailPage() {
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-xl font-bold lg:text-2xl">
-                  {reportData.symptom}
+                  {report.symptomInput}
                 </h1>
-                <SeverityBadge
-                  severity={reportData.severity}
-                  className="text-sm"
-                />
+                <SeverityBadge severity={report.severity} className="text-sm" />
               </div>
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" />
                 <span>
-                  {reportData.date} at {reportData.time}
+                  {date} at {time}
                 </span>
               </div>
             </div>
@@ -116,7 +125,7 @@ export default function ReportDetailPage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            {reportData.description}
+            {report.symptomInput}
           </p>
         </CardContent>
       </Card>
@@ -127,7 +136,9 @@ export default function ReportDetailPage() {
           <CardTitle className="text-base">Analysis Summary</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm leading-relaxed">{reportData.analysis.explanation}</p>
+          <p className="text-sm leading-relaxed">
+            {report.structuredReport.explanation}
+          </p>
         </CardContent>
       </Card>
 
@@ -136,23 +147,23 @@ export default function ReportDetailPage() {
         <ResultCard
           icon={HelpCircle}
           title="Possible Causes"
-          items={reportData.analysis.possibleCauses}
+          items={report.structuredReport.possibleCauses}
         />
         <ResultCard
           icon={Zap}
           title="Immediate Actions"
-          items={reportData.analysis.immediateActions}
+          items={report.structuredReport.immediateActions}
           highlight
         />
         <ResultCard
           icon={Utensils}
           title="Diet Recommendations"
-          items={reportData.analysis.dietRecommendations}
+          items={report.structuredReport.dietRecommendations}
         />
         <ResultCard
           icon={Pill}
           title="Medications"
-          items={reportData.analysis.medications}
+          items={report.structuredReport.medications}
         />
       </div>
 
@@ -164,7 +175,7 @@ export default function ReportDetailPage() {
             <div className="space-y-1">
               <p className="font-semibold">When to Seek Medical Help</p>
               <p className="text-sm text-muted-foreground">
-                {reportData.analysis.whenToSeekHelp}
+                {report.structuredReport.whenToSeekHelp}
               </p>
             </div>
           </div>
@@ -178,7 +189,7 @@ export default function ReportDetailPage() {
         </CardHeader>
         <CardContent>
           <dl className="grid gap-3 sm:grid-cols-2">
-            {Object.entries(reportData.answers).map(([key, value]) => (
+            {Object.entries(report.answers).map(([key, value]) => (
               <div key={key} className="space-y-1">
                 <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {key.replace(/([A-Z])/g, " $1").trim()}
