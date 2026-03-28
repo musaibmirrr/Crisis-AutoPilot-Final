@@ -92,7 +92,7 @@ ${context}
           content: prompt,
         },
       ],
-      model: "llama3-8b-8192",
+      model: "llama-3.1-8b-instant",
       temperature: 0.1,
       response_format: { type: "json_object" },
     })
@@ -107,10 +107,10 @@ ${context}
     }
 
     return NextResponse.json({ report })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in triage:", error)
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: error?.message || "Internal server error" },
       { status: 500 }
     )
   }
