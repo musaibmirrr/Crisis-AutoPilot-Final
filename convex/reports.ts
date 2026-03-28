@@ -4,6 +4,10 @@ import { v } from "convex/values"
 export const getReportsByUser = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
+    console.log("Fetching reports for user:", args.userId)
+    if (!args.userId) {
+      throw new Error("userId is required")
+    }
     const reports = await ctx.db
       .query("reports")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
@@ -24,6 +28,10 @@ export const getReportById = query({
 export const getReportStats = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
+    console.log("Fetching report stats for user:", args.userId)
+    if (!args.userId) {
+      throw new Error("userId is required")
+    }
     const reports = await ctx.db
       .query("reports")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))

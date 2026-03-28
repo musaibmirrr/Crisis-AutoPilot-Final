@@ -17,12 +17,12 @@ export default function ReportsPage() {
 
   const reports = useQuery(
     api.reports.getReportsByUser,
-    user?.id ? { userId: user.id } : "skip"
+    !userLoading && user?.id ? { userId: user.id } : "skip"
   )
 
   const stats = useQuery(
     api.reports.getReportStats,
-    user?.id ? { userId: user.id } : "skip"
+    !userLoading && user?.id ? { userId: user.id } : "skip"
   )
 
   const isLoading = userLoading || reports === undefined || stats === undefined
